@@ -1,0 +1,41 @@
+<launch>
+
+  <arg name="robot_name" default="stretch" />
+  <arg name="robot_position" default="-x -1.0 -y 5.0 -z 0.01" />
+
+
+
+    <!-- Load the URDF into the ROS Parameter Server -->
+    <param name="robot_description" command="$(find xacro)/xacro '$(find multi_robot_scenario)/xacro/stretch/stretch_gazebo.urdf.xacro'" />
+
+    <!-- Run a python script to the send a service call to gazebo_ros to spawn a URDF robot -->
+    <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-urdf -model $(arg robot_name) -param robot_description $(arg robot_position) -J joint_wrist_yaw 3.14 -J joint_list 0.2"/>
+
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
+      <param name="publish_frequency" type="double" value="30.0"/>
+      <!--<param name="tf_prefix" type="string" value="$(arg robot_name)"/>-->
+    </node>
+
+  <rosparam command="load"
+            file="$(find stretch_gazebo)/config/joints.yaml" 
+            ns="stretch_joint_state_controller" />
+
+  <rosparam command="load"
+            file="$(find stretch_gazebo)/config/drive_config.yaml"
+            ns="stretch_diff_drive_controller" />
+
+  <rosparam command="load"
+            file="$(find stretch_gazebo)/config/arm.yaml"/>
+
+  <rosparam command="load"
+            file="$(find stretch_gazebo)/config/head.yaml" />
+
+  <rosparam command="load"
+            file="$(find stretch_gazebo)/config/gripper.yaml" />
+
+  <node name="stretch_controller_spawner" pkg="controller_manager" type="spawner"
+        args="stretch_joint_state_controller stretch_diff_drive_controller stretch_arm_controller stretch_head_controller stretch_gripper_controller"/>
+
+  <node name="publish_ground_truth_odom" pkg="stretch_gazebo" type="publish_ground_truth_odom.py" output="screen"/>
+
+</launch>
